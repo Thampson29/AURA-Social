@@ -279,6 +279,10 @@ const PostCard: React.FC<PostCardProps> = ({ post, isCinematic, onInView }) => {
   const [resonance, setResonance] = useState(post.likes);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [showComments, setShowComments] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+  const [isShared, setIsShared] = useState(false);
+  const [commentsList, setCommentsList] = useState<Comment[]>(post.commentsList);
+  const [commentText, setCommentText] = useState("");
   
   const ref = useRef<HTMLElement>(null);
   const isInView = useInView(ref, { margin: "-40% 0px -40% 0px" });
@@ -324,6 +328,43 @@ const PostCard: React.FC<PostCardProps> = ({ post, isCinematic, onInView }) => {
       setHasResonated(false);
       setResonance(prev => prev - 1);
     }
+  };
+
+  const handleSave = () => {
+    setIsSaved(!isSaved);
+  };
+
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Aura',
+          text: 'Check out this post on Aura!',
+          url: window.location.href,
+        });
+      } catch (err) {
+        console.log('Error sharing', err);
+      }
+    } else {
+      setIsShared(true);
+      setTimeout(() => setIsShared(false), 2000);
+    }
+  };
+
+  const handlePostComment = () => {
+    if (!commentText.trim()) return;
+    const newComment: Comment = {
+      id: Math.random().toString(36).substr(2, 9),
+      author: 'You',
+      handle: '@currentuser',
+      avatar: 'https://picsum.photos/seed/currentuser/100/100',
+      content: commentText.trim(),
+      timestamp: 'Just now',
+      likes: 0,
+      replies: []
+    };
+    setCommentsList([...commentsList, newComment]);
+    setCommentText("");
   };
 
   return (
@@ -515,16 +556,43 @@ const PostCard: React.FC<PostCardProps> = ({ post, isCinematic, onInView }) => {
               </button>
             </div>
 
-            <button onClick={() => setShowComments(!showComments)} className="flex items-center gap-2 text-slate-600 dark:text-slate-400 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors group">
+            <button onClick={() => setShowComments(!showComments)} className="flex items-center gap-2 text-slate-400 hover:text-indigo-400 transition-colors group">
               <MessageCircle className="w-6 h-6 group-hover:scale-110 transition-transform" />
-              <span className="text-sm font-medium">{post.commentCount}</span>
+              <span className="text-sm font-medium">{post.commentCount + (commentsList.length - post.commentsList.length)}</span>
             </button>
-            <button className="text-slate-600 dark:text-slate-400 hover:text-emerald-500 dark:hover:text-emerald-400 transition-colors group">
-              <Share2 className="w-6 h-6 group-hover:scale-110 transition-transform" />
-            </button>
+            
+            <div className="relative">
+              <button 
+                onClick={handleShare}
+                className={cn(
+                  "transition-colors group hover:text-emerald-400",
+                  isShared ? "text-emerald-400" : "text-slate-400"
+                )}
+              >
+                <Share2 className="w-6 h-6 group-hover:scale-110 transition-transform" />
+              </button>
+              <AnimatePresence>
+                {isShared && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10, scale: 0.9 }}
+                    animate={{ opacity: 1, y: -40, scale: 1 }}
+                    exit={{ opacity: 0, y: -30 }}
+                    className="absolute -top-4 left-1/2 -translate-x-1/2 bg-emerald-500 text-white text-xs font-bold px-2 py-1 rounded-md whitespace-nowrap shadow-lg pointer-events-none"
+                  >
+                    Copied!
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
-          <button className="text-slate-600 dark:text-slate-400 hover:text-amber-500 dark:hover:text-amber-400 transition-colors group">
-            <Bookmark className="w-6 h-6 group-hover:scale-110 transition-transform" />
+          <button 
+            onClick={handleSave}
+            className={cn(
+              "transition-colors group hover:text-amber-400",
+              isSaved ? "text-amber-400" : "text-slate-400"
+            )}
+          >
+            <Bookmark className={cn("w-6 h-6 group-hover:scale-110 transition-transform", isSaved && "fill-current")} />
           </button>
         </div>
         
@@ -542,10 +610,10 @@ const PostCard: React.FC<PostCardProps> = ({ post, isCinematic, onInView }) => {
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              className="overflow-hidden mt-4 pt-4 border-t border-slate-100 dark:border-slate-800"
+              className="overflow-hidden mt-4 pt-4 border-t border-slate-800"
             >
               <div className="flex flex-col gap-2">
-                {post.commentsList.map(comment => (
+                {commentsList.map(comment => (
                   <CommentItem key={comment.id} comment={comment} />
                 ))}
               </div>
@@ -556,10 +624,17 @@ const PostCard: React.FC<PostCardProps> = ({ post, isCinematic, onInView }) => {
                 <div className="flex-1 relative">
                   <input 
                     type="text" 
+                    value={commentText}
+                    onChange={(e) => setCommentText(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handlePostComment()}
                     placeholder="Add a comment..." 
-                    className="w-full bg-slate-100 dark:bg-slate-800/50 rounded-full py-2 px-4 text-sm text-slate-900 dark:text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
+                    className="w-full bg-slate-800/80 rounded-full py-2 pl-4 pr-16 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all border border-slate-700"
                   />
-                  <button className="absolute right-2 top-1/2 -translate-y-1/2 text-indigo-500 hover:text-indigo-600 font-medium text-sm px-2 py-1">
+                  <button 
+                    onClick={handlePostComment}
+                    disabled={!commentText.trim()}
+                    className="absolute right-1 top-1/2 -translate-y-1/2 text-indigo-400 disabled:opacity-50 disabled:cursor-not-allowed hover:text-indigo-300 font-bold text-sm px-3 py-1.5 bg-indigo-500/10 rounded-full transition-colors"
+                  >
                     Post
                   </button>
                 </div>

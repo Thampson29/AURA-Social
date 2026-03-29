@@ -13,8 +13,8 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>('light');
-  const [isScrollingExcessively, setScrollingExcessively] = useState(false);
+const [theme, setTheme] = useState<Theme>('dark');
+  const [isScrollingExcessively, setScrollingExcessively] = useState(false);    
 
   // Mouse tracking for ambient blobs
   const mouseX = useSpring(0, { stiffness: 50, damping: 20 });
@@ -32,17 +32,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       mouseY.set(yPct * 100);
     };
     window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);      
   }, [mouseX, mouseY]);
 
   useEffect(() => {
-    // Auto-detect theme based on time
-    const hour = new Date().getHours();
-    if (hour >= 20 || hour < 6) {
-      setTheme('dark');
-    } else {
-      setTheme('light');
-    }
+    // Enforce dark theme
+    setTheme('dark');
   }, []);
 
   useEffect(() => {
